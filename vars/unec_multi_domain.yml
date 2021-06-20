@@ -1,0 +1,25 @@
+---
+
+foxhound:
+  domain_name: foxhound.com
+  domain_admin_user: 
+  domain_admin_pass: 
+  DSRM_password:
+  dc_dns1: 127.0.0.1
+  dc_dns2:
+  dns1:
+  dns2:
+  S2D1:
+    cluster_name: fscls0
+    cluster_ip: 
+    storage_account: 
+    storage_key: 
+secretbase: 
+  domain_name: secretbase.foxhound.com
+  domain_admin_user:
+  domain_admins_pass:
+  DSRM_password:
+  dc_dns1: 127.0.0.1
+  dc_dns2:
+  dns1:
+  dns2: 

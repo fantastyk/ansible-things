@@ -1,0 +1,49 @@
+---
+  - name: provision new Azure virtual host
+    azure_rm_virtualmachine:
+      admin_username: '{{ vm_user }}'
+      admin_password: "{{ vm_password }}"
+      os_type: Windows
+      image:
+        offer: WindowsServer
+        publisher: MicrosoftWindowsServer
+        sku: 2019-Datacenter
+        version: latest
+      name: "{{ vm_name }}"
+      resource_group: "{{ resource_group }}"
+      state: present
+      vm_size: Standard_D1
+      public_ip_allocation_method: Static
+      #winrm:
+      # - protocol: https
+      #storage_account_name: "{{ vm_name }}"
+      #virtual_network_name: "{{ vm_name }}"
+      #subnet_name: "{{ vm_name }}"
+
+  - name: create Azure vm extension to enable HTTPS WinRM listener
+    azure_rm_virtualmachine_extension:
+      name: winrm-extension
+      resource_group: "{{ resource_group }}"
+      virtual_machine_name: "{{ vm_name }}"
+      publisher: Microsoft.Compute
+      virtual_machine_extension_type: CustomScriptExtension
+      type_handler_version: 1.9
+      settings: '{"commandToExecute": "powershell.exe -ExecutionPolicy ByPass -EncodedCommand {{winrm_enable_script}}"}'
+      auto_upgrade_minor_version: true
+
+  - name: wait for the WinRM port to come online
+    wait_for:
+      port: 5986
+      host: '{{azure_vm.properties.networkProfile.networkInterfaces[0].properties.ipConfigurations[0].properties.publicIPAddress.properties.ipAddress}}'
+      timeout: 600
+
+  - name: Adding host to inventory
+    add_host:
+      hostname:  '{{azure_vm.properties.networkProfile.networkInterfaces[0].properties.ipConfigurations[0].properties.publicIPAddress.properties.ipAddress}}'
+      groups:
+       # - azure_win2019
+        - windows
+  - name: populating facts
+    azure_rm_virtualmachine_facts:
+      name: "{{ vm_name }}"
+      resource_group: "{{ resource_group }}"

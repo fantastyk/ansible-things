@@ -1,0 +1,48 @@
+---
+- name: Setting local admin to not expire
+  win_user: 
+    name: Administrator
+    password_never_expires: true
+
+- name: setting timezone to eastern
+  win_timezone:
+    timezone: "{{ local_timezone }}"
+
+- name: Disabling Server Manager on Logon
+  win_scheduled_task:
+    name: ServerManager
+    enabled: no
+
+- name: Activating Windows - Supplied key
+  win_shell: cscript slmgr.vbs /ipk "{{ license_key }}"
+  args:
+    chdir: C:\Windows\System32\
+  when: license_key is defined
+  ignore_errors: yes
+
+- name: Activating Windows - Auto
+  win_shell: cscript slmgr.vbs /ato
+  args: 
+    chdir: C:\Windows\System32\
+  when: license_key is undefined
+  ignore_errors: yes
+
+- name: Setting wmi to static port
+  win_shell: winmgmt -standalonehost
+  args: 
+    chdir: C:\Windows\System32\
+  tags: wmi
+
+- name: Restarting winmgmt
+  win_service: 
+    name: winmgmt
+    state: restarted
+    force_dependent_services: yes
+  tags: wmi
+
+- name: Opening WMI port - TCP 24158
+  win_firewall_rule:
+    name: WMIFixedPort
+    localport: 24158
+    action: allow
+    direction: in

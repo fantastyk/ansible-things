@@ -1,0 +1,33 @@
+---
+- name: Installing AD
+  win_feature:
+    name: AD-Domain-Services
+    include_management_tools: yes
+    include_sub_features: yes
+    state: present
+  register: adfeatures
+  
+- name: rebooting if required
+  win_reboot:
+  when: adfeatures.reboot_required
+
+- name: Promoting Domain Controller -  "{{ inventory_hostname }}" to "{{ domain_name }}"
+  win_domain_controller: 
+    dns_domain_name: "{{ domain_name  }}"
+    domain_admin_user: "{{ domain_admin }}"
+    domain_admin_password: "{{ domain_admin_pass }}"
+    safe_mode_password: "{{ DSRM_password }}"
+    state: domain_controller
+    log_path: C:\anisble_logs\dcpromo.log
+  register: dcpromo
+
+- name: rebooting if required
+  win_reboot:
+  when: dcpromo.reboot_required
+
+- name: Configuring DNS client
+  win_dns_client:
+    adapter_names: '*'
+    ipv4_addresses:
+    - "{{ dns }}"
+    - "{{ dns2 }}"

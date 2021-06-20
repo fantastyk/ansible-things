@@ -1,0 +1,10 @@
+---
+- name: Installing Failover clustering
+  win_feature:
+    name: FS-FileServer
+    state: present
+  register: feature_fileserver
+
+- name: Reboot if required
+  win_reboot:
+  when: feature_fileserver.reboot_required

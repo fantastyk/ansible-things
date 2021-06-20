@@ -1,0 +1,26 @@
+---
+- hosts: #fill me in
+  gather_facts: true
+  vars_files:
+    - /etc/ansible/group_vars/rhel7_vars.yml
+  vars_prompt:
+  - name: join_user
+    prompt: "Username for AD join"
+  - name: join_password
+    prompt: "Password for AD join"
+  - name: hostname
+    prompt: "hostname of the server"
+    private: yes 
+  become: yes
+  tasks:
+    - import_tasks: centos7_build.yml
+    - import_tasks: openscap.yml
+    - name: Adding firewall rule for SNMP
+      iptables: 
+        chain: INPUT
+        protocol: "{{item}}"
+        destination_port: 161
+        jump: ACCEPT
+      with_items:
+        - tcp
+        - udp

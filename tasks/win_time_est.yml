@@ -1,0 +1,4 @@
+---
+- name: setting timezone to eastern
+  win_timezone:
+    timezone: Eastern Standard Time

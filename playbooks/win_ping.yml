@@ -1,0 +1,17 @@
+---
+
+- name: ping test - pdc
+  hosts: pdc
+  gather_facts: no
+  tasks: 
+    - win_ping:
+- name: ping test - dc
+  hosts: dc
+  gather_facts: no
+  tasks: 
+     - win_ping: 
+- name: ping test - non_dc
+  hosts: non_dc
+  gather_facts: no 
+  tasks: 
+     - win_ping:

@@ -1,0 +1,17 @@
+---
+    - name: Installing Openscap
+      yum:
+        name: scap-security-guide
+        state: latest
+    - name: Evaluating SCAP baseline
+      shell: oscap xccdf eval --results /root/eval_results.xml --profile xccdf_org.ssgproject.content_profile_pci-dss /usr/share/xml/scap/ssg/content/ssg-centos7-ds.xml
+      ignore_errors: yes
+      no_log: true
+    - name: Enforcing SCAP baseline 
+      shell: oscap xccdf eval --remediate --results /root/remediation.xml --profile xccdf_org.ssgproject.content_profile_pci-dss /usr/share/xml/scap/ssg/content/ssg-centos7-ds.xml
+      ignore_errors: yes
+      no_log: true
+    - name: Revaluating SCAP Policy
+      shell: oscap oval generate report /root/after_remediation.xml > /root/ssg-scan-oval-report.html
+      ignore_errors: yes
+      no_log: true

@@ -1,0 +1,45 @@
+---
+# replace(' ', '') is thrown a bout to remove a mysterious space at the end of certain variables.
+
+- name: create windows cluster
+  win_dsc:
+    resource_name: xCluster
+    Name: "{{ cluster_name | replace(' ','') }}"
+    StaticIPAddress: "{{ cluster_ip }}"
+    #DomainAdministratorCredential_username: "{{ domain_admin }}@{{ domain_name }}"
+    DomainAdministratorCredential_username: "{{ domain_admin | replace(' ', '') }}"
+    DomainAdministratorCredential_password: "{{ domain_admin_pass }}"
+  register: create_windows_cluster
+  ignore_errors: yes
+  when: "'node01' is in name"
+
+- name: wait for cluster
+  win_dsc:
+    resource_name: xWaitForCluster
+    Name: "{{ cluster_name | replace(' ','')}}"
+    RetryIntervalSec: "{{ retry_interval_sec }}"
+    RetryCount: "{{ retry_count }}"
+  when: "'node01' is not in name"
+
+- name: join windows cluster
+  win_dsc:
+    resource_name: xCluster
+    Name: "{{ cluster_name | replace(' ','')}}"
+    StaticIPAddress: "{{ cluster_ip }}"
+    #DomainAdministratorCredential_username: "{{ domain_admin }}@{{ domain_name }}"
+    DomainAdministratorCredential_username: "{{ domain_admin | replace(' ', '') }}"
+    DomainAdministratorCredential_password: "{{ domain_admin_pass }}"
+  ignore_errors: yes
+  when: "'node01' is not in name"
+
+- name: Setting up Cloud Disk 
+  win_dsc:
+    resource_name: xClusterQuorum
+    Type: NodeAndCloudMajority
+    Resource: "{{ storage_account }}"
+    StorageAccountAccessKey: "{{ storage_key }}"
+    IsSingleInstance: 'yes'
+    PsDscRunAsCredential_username: "{{ domain_admin | replace(' ', '') }}"
+    PsDscRunAsCredential_password: "{{ domain_admin_pass }}"
+  when: "'node01' is in name"
+

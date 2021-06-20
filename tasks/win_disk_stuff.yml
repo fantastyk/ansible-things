@@ -1,0 +1,3 @@
+---
+- name: Get Disk Facts
+  win_disk_facts:

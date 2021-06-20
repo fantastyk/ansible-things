@@ -1,0 +1,12 @@
+---
+- name: Installing Failover clustering
+  win_feature:
+    name: Failover-Clustering
+    state: present
+    include_sub_feature: yes
+    include_management_tools: yes
+  register: feature_cluster
+
+- name: Reboot if required
+  win_reboot:
+  when: feature_cluster.reboot_required

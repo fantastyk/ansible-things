@@ -1,0 +1,10 @@
+---
+
+cluster_name: "{{cluster_name | mandatory }}"
+cluster_ip: "{{cluster_ip | mandatory}}"
+retry_interval_sec: 10
+retry_count: 60
+
+domain_name: "{{domain_name | mandatory}}"
+domain_admin:  "{{ domain_admin | mandatory }}"
+domain_admin_pass: "{{domain_admin_pass | mandatory}}"

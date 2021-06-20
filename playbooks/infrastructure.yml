@@ -1,0 +1,164 @@
+---
+
+#Base windows config
+- name: Configuring VMs
+  hosts: pdc:dc:non_dc
+  vars_files:
+   - vars/domain.yml
+#  vars:
+#    ansible_user: 
+#    ansible_port: 5986
+#    ansible_connection: psrp
+#    ansible_psrp_cert_validation: ignore
+#    ansible_psrp_auth: ntlm
+  tasks:
+    # - import_tasks: tasks/win_disk_stuff.yml
+    # - import_tasks: tasks/win_dns.yml
+  tags: base
+
+
+#Only use on greenfield environments - creates a new AD forest if domain isn't reachable
+- name: Forest Setup
+  hosts: pdc 
+  serial: 1
+  vars_files:
+    - vars/domain.yml
+  #WIP - prompt to abort playbook if this task accidentally gets hit  
+  #vars_prompt:
+  #- name: "check_mode"
+  #  prompt: "Check Mode: yes("
+  tasks: 
+    - include_role: 
+        name: newforest
+      vars: 
+        domain_name: "{{ domain['domain_name'] }}" 
+        domain_admin: "{{ domain['domain_admin_user'] }}"
+        domain_admin_pass: "{{ domain['domain_admin_pass'] }}"
+        netbios_name: "{{ domain['netbios'] }}"
+        DSRM_password: "{{ domain['domain_admin_pass'] }}"
+        dns: "{{ domain['dns1'] }}"
+        dns2: "{{ domain['dns2'] }}"
+    - pause:
+        prompt: "Switch Azure VNET DNS before continuing."
+  tags: newforest
+# TODO: set hosts with creative dynamic inventory function DC + domain name. Copy and paste this play for multiple domains.
+# Find a better way to set DNS servers
+
+- name: rebooting for DNS changes
+  hosts: dc:non_dc
+  vars_files: 
+    - vars/domain.yml
+  tasks:
+    - win_reboot:
+  tags: newforest
+
+  
+- name: Domain Controller
+  hosts: dc
+  serial: 1
+  # tasks:
+  vars_files:
+    - vars/domain.yml
+  tasks:
+    - include_role:
+        name: dcpromo
+      vars:
+        domain_name: "{{ domain['domain_name']}}" 
+        domain_admin: "{{ domain['domain_admin_user'] }}"
+        domain_admin_pass: "{{ domain['domain_admin_pass'] }}"
+        DSRM_password: "{{ domain['domain_admin_pass'] }}"
+        # TODO: set in variable file - look into expressing with jinja template
+        dns: "{{ domain['dns1'] }}"
+        dns2: "{{ domain['dns3'] }}"
+  tags: dc
+
+
+- name: Domain Join - "{{ domain['domain_name']}}"
+  hosts: non_dc
+  vars_files:
+    - vars/domain.yml
+  tasks:
+    - include_role: 
+        name: win_domain_join
+      vars:
+        domain_name: "{{ domain['domain_name'] }}" 
+        domain_admin: "{{ domain['domain_admin_user'] }}"
+        domain_admin_pass: "{{ domain['domain_admin_pass'] }}"
+        #server_ou:
+  tags: domain_join
+
+
+- name: Install Crowdstrike Sensor
+  hosts: pdc:dc:non_dc
+  vars_files: 
+   - vars/domain.yml
+  vars:
+    ansible_become: yes
+    ansible_become_method: runas
+    ansible_become_user: "{{ domain['domain_admin_user'] }}"
+    ansible_become_password: "{{ domain['domain_admin_pass'] }}"
+    ansible_become_flags: logon_type=interactive
+  tasks: 
+    - include_role: 
+        name: crowdstrike_sensor
+      vars:
+        Installer_Path: "D:\\"
+        CID: "{{  domain['crowdstrike_cid'] }}"
+  tags: crowdstrike
+
+- name: Patching VMs
+  hosts: pdc:dc:non_dc
+  vars_files:
+   - vars/domain.yml
+  tasks:
+     - import_tasks: tasks/win_update.yml
+  tags: updates
+
+
+
+
+#- name: Failover Cluster - Feauture Install
+#  hosts: cluster1
+#  roles:
+#   - role:  win_cluster_common
+
+# Sets up Failover Clustering with cloud witness disk
+#- name: Failover Cluster - Config - StorageSpaces
+#  hosts: cluster1
+#  vars_files:
+#    - vars/domain.yml
+#  vars:
+#    ansible_user: nwujastyk@foxhound.com
+#    ansible_connection: psrp
+#    ansible_psrp_auth: credssp
+#    ansible_psrp_credssp_auth_mechanism: ntlm
+#    ansible_credssp_minimum_version: 5
+#  tasks: 
+#    - include_role: 
+#        name: win_cluster_config
+#      vars:
+#        #first_node: true
+#        domain_name: "{{ domain['domain_name']}}"
+#        domain_admin: "{{ ansible_user }} "
+#        domain_admin_pass: "{{ domain['domain_admin_pass'] }}"
+#        cluster_name: "{{ domain.S2D1['cluster_name'] }} "
+#        cluster_ip: "{{ domain.S2D1['cluster_ip'] }} "
+#        storage_account: "{{ domain.S2D1['storage_account'] }}"
+#        storage_key: "{{ domain.S2D1['storage_key'] }}"
+#        cloud_quorum: true
+#  tags: failover
+#convert to a module
+
+
+#- name: Storage Spaces - Feature Install
+#  hosts: "{{ tag_storagespaces_true | first }}"
+#  vars_files:
+#    - vars/domain.yml
+#  tasks: 
+#    - name: Enabling StorageSpaces on the Cluster {{ domain.S2D1['cluster_name']}}
+#      win_shell: Enable-ClusterS2D -Autoconfig -CacheState Disabled -Confirm:$false
+#  tags: S2d     
+   # - 
+   # - import_tasks: tasks/win_cluster_install.yml
+    
+         

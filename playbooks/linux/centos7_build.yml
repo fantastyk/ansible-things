@@ -1,0 +1,122 @@
+---
+#    - name: Need some more information
+#      vars_prompts:
+#        - name: "join_user"
+##          prompt: "Username for AD join:"
+#       - name: "join_password"
+#          prompt: "Password for AD Join:"
+#          private: yes 
+
+    - name: setting hostname
+      hostname:
+        name: "{{hostname}}"
+    - name: cleaning up yum
+      shell: yum clean metadata
+
+    - name: Adding EPEL
+      yum_repository:
+        name: epel
+        description: EPEL YUM repo
+        baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+        gpgcheck: yes
+    - rpm_key:
+        state: present
+        key: http://mirror.grid.uchicago.edu/pub/linux/epel/RPM-GPG-KEY-EPEL-7
+    - name: Installing standard packages
+      yum: 
+        name: 
+          - vim
+          - lsof
+          - sysstat
+          - sssd
+          - hyperv-daemons
+          - net-snmp
+          - iptables-services
+          - net-tools
+          - mlocate
+          - clamav
+          - clamav-update
+          - realmd
+          - krb5-workstation
+          - samba-common-tools
+          - libselinux-python
+        state: latest
+
+    - name: Downloading pip
+      get_url:
+        url: https://bootstrap.pypa.io/get-pip.py
+        dest: /tmp/get-pip.py
+        mode: 500
+
+    - name: Installing pip
+      shell: /tmp/get-pip.py
+    - name: Installing some python modules
+      pip:
+        name: "{{item}}"
+      with_items:
+        - pexpect
+    - name: Restarting DBUS service
+      systemd:
+        name: dbus
+        state: restarted
+    - name: Making sure Realmd is started
+      systemd:
+        name: realmd
+        state: restarted
+
+    - name: Joining Server to Domain
+      expect:
+        command: realm join -U "{{join_user}}"FOXHOUND.COM foxhound.com
+        responses:
+          Password for .*: "{{join_password}}"
+    
+    - name: "Updating sssd.conf"
+      copy:
+        src: /etc/ansible/files/pci/sssd_foxhound.conf
+        dest: /etc/sssd/sssd.conf
+        backup: yes
+    - name: "Restarting SSSD"
+      systemd:
+        name: sssd
+        state: restarted
+    - name: Setting up sudoers
+      blockinfile:
+        path: /etc/sudoers
+        block: |
+           %Linux_Admins ALL=(ALL) ALL
+
+        validate: '/usr/sbin/visudo -cf %s'
+#        with_items: 
+ #        - "ansible_pci ALL=(ALL)   NOPASSWD:ALL"
+ #        - "%LinuxAdmins ALL=(ALL)  NOPASSWD:ALL"
+    - name: stopping snmpd service
+      systemd:
+        name: snmpd
+        state: stopped
+ 
+    - name: setting up SNMP 
+      shell: net-snmp-create-v3-user -ro -A "{{snmp_secret1}}" -X "{{snmp_secret2}}" -a SHA -x AES monitoring
+    
+    - name: starting snmpd
+      systemd:
+        name: snmpd
+        state: started
+
+    - name: Installing updates
+      yum:
+        name: '*'
+        state: latest
+    - name: Rebooting
+      shell: "sleep 5 && shutdown -r now"
+      async: 300
+      poll: 0
+      any_errors_fatal: false
+    - name: Waiting for ssh
+      local_action: wait_for
+      args:
+        host: "{{ ansible_ssh_host }}"
+        port: 22
+        delay: 60
+        timeout: 900 
+        state: started
+      become: false

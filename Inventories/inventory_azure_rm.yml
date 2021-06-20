@@ -1,0 +1,20 @@
+plugin: azure_rm
+plain_host_names: yes
+auth_source: auto
+include_vm_resource_groups:
+  - server-domain-controller-rg
+  - server-application-rg
+  - server-database-rg
+
+conditional_groups:
+   pdc: "'dc01' in name"
+   dc: "'dc02' in name"
+   non_dc: "'dc' not in name and 'pafwtag' not in name"
+   # first_node: "'node01' in name"
+   #other_node: "'node02' in name"
+
+
+keyed_groups: 
+- prefix: tag
+  key: tags
+

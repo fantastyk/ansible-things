@@ -1,0 +1,13 @@
+---
+#Template for a basic Window's Domain environment - 2 DC setup
+domain:
+  domain_name: foxhound.com
+  netbios: foxhound
+  dns_delegation: yes
+  domain_admin_user: 
+  domain_admin_pass: 
+  DSRM_password:
+  #crowdstrike_cid:   
+  dns1: 127.0.0.1
+  dns2: 172.24.1.22 #dc02
+  dns3: 172.24.1.21 #dc01

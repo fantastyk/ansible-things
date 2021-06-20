@@ -1,0 +1,24 @@
+---
+- block:
+   - name: Patching WSUS...checking for missing updates.
+     win_updates: state=searched
+     register: update_count
+     register: update_result
+   
+     #   - name: Rebooting if needed.
+     #win_reboot:
+
+- name: patching host.
+  win_updates:
+    category_names:
+      - securityupdates
+      - CriticalUpdates
+      - UpdateRollups
+      - Updates
+      - DefinitionUpdates
+    server_selection: windows_update
+    state: installed
+    log_path : C:\windowsupdate_ansible.log
+    register: result
+    reboot: yes
+    reboot_timeout: 3600

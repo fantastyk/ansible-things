@@ -1,0 +1,25 @@
+--- 
+- name: Copying Installer
+  win_copy:
+    src: ../files/WindowsSensor.exe
+    dest: "{{ Installer_Path }}"
+- set_fact: 
+   script_name: install_sensor.ps1
+   
+
+- name: Copying Install Script
+  win_template:
+    src: ../templates/install_sensor.ps1
+    dest: "{{ Installer_Path ~ script_name | win_dirname }}"
+
+#debug
+#- win_whoami:
+        #become: yes
+        #become_method: runas
+        #become_user: Administrator
+
+- name: Installing the Sensor
+  win_command: "WindowsSensor.exe /install /quiet /norestart CID={{ CID }}" # free form command execution.
+  args:
+    chdir: "{{ Installer_Path }}" # Parent location for the downloaded installer.
+  tags: install_windows_agent

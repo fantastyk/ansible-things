@@ -1,0 +1,13 @@
+---
+- name: Activating Windows - Supplied key
+  win_shell: cscript slmgr.vbs /ipk "{{ license_key }}"
+  args:
+    chdir: C:\Windows\System32\
+  when: license_key is defined
+
+- name: Activating Windows - Auto
+  win_shell: cscript slmgr.vbs /ato
+  args: 
+    chdir: C:\Windows\System32\
+  when: license_key is undefined
+

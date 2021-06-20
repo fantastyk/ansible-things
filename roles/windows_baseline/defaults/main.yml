@@ -1,0 +1,4 @@
+---
+
+local_timezone:  "{{ local_timezone | default('Eastern Standard Time') }}"
+
